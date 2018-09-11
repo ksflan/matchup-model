@@ -1,0 +1,18 @@
+
+model-1.stan
+
+This is a simple model that has batter parameters and pitcher parameters
+with a single type of outcome. It also has batter parameters for
+pitcher characteristics and context variables (location, outs, etc.).
+
+
+
+model-2.stan
+
+This is the first attempt at a multinomial outcome. The first draft
+will have only batter and pitcher parameters and the outcome
+will be multinomial.
+
+
+
+
