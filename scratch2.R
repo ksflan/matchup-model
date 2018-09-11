@@ -9,7 +9,7 @@ people <- readRDS("data/people.rds")
 
 # Testing model-2.stan ----
 
-MINIMUM_ATBATS <- 400
+MINIMUM_ATBATS <- 600
 
 sample_games <- sample(unique(atbat_2017$gameday_link), 20)
 sample_batters <- atbat_2017 %>%
@@ -46,8 +46,8 @@ pre_data <- atbat_2017 %>%
   # filter(event %in% c("Single", "Double", "Triple", "Strikeout",
   #                     "Walk", "Groundout", "Flyout", "Pop Out", "Home Run",
   #                     "Intent Walk", "Lineout")) %>%
-  filter(event %in% c("Single", "Walk", "Home Run", "Strikeout")) #%>%
-  # sample_n(15000)
+  filter(event %in% c("Single", "Walk", "Home Run", "Strikeout")) %>%
+  sample_n(1500)
   
 m_matrix <- model.matrix(
   event ~ platoon + venue,
@@ -59,6 +59,7 @@ data <- list(
   P = length(unique(pre_data$pitcher)),
   B = length(unique(pre_data$batter)),
   D = length(unique(pre_data$event)),
+  K = ncol(m_matrix),
   batter = as.numeric(factor(pre_data$batter)),
   pitcher = as.numeric(factor(pre_data$pitcher)),
   outcome = as.numeric(factor(pre_data$event)),
