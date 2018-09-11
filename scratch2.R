@@ -47,7 +47,7 @@ pre_data <- atbat_2017 %>%
   #                     "Walk", "Groundout", "Flyout", "Pop Out", "Home Run",
   #                     "Intent Walk", "Lineout")) %>%
   filter(event %in% c("Single", "Walk", "Home Run", "Strikeout")) #%>%
-  sample_n(15000)
+  # sample_n(15000)
   
 m_matrix <- model.matrix(
   event ~ platoon + venue,
@@ -63,6 +63,7 @@ data <- list(
   pitcher = as.numeric(factor(pre_data$pitcher)),
   outcome = as.numeric(factor(pre_data$event)),
   event_values = rep(0.1, length(unique(pre_data$event))),
+  V = m_matrix,
   zero = 0
 )
 

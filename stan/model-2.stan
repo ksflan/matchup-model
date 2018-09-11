@@ -85,7 +85,7 @@ model {
   omega ~ normal(0,1);
   
   for(n in 1:N)
-    outcome[n] ~ categorical_logit(theta[batter[n]] - beta[pitcher[n]] + omega * V[n]);
+    outcome[n] ~ categorical_logit(theta[batter[n]] - beta[pitcher[n]] + V[n] * omega);
 }
 generated quantities {
   vector[D] batter_outcomes[B];
