@@ -110,6 +110,13 @@ theta <- model2_summary %>%
               select(key_mlbam, name_last, name_first) %>%
               mutate(key_mlbam = as.numeric(key_mlbam)), by = c("batter" = "key_mlbam"))
 
+omega <- model2_summary %>%
+  filter(grepl("omega", parameter),
+         !grepl("raw", parameter)) %>%
+  mutate(outcome = rep(levels(factor(pre_data$event)),
+                       each = data$K),
+         variable = rep(colnames(m_matrix),
+                        times = data$D))
 
 beta %>%
   ggplot(aes(mean, color = outcome)) +

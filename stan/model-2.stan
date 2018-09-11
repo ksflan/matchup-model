@@ -15,7 +15,11 @@ data {
   row_vector[D] event_values;
   real zero; // this is just the number 0, to be used for fixing the Dth element of the pitcher/batter coefficient vectors
   // matrix[B,K] W; // covariate matrix
-  matrix[N,K] V; // atbat-level covariates
+  vector[K] V[N]; // atbat-level covariates
+}
+transformed data {
+  row_vector[K] zeroes;
+  zeroes = rep_row_vector(0.0, K);
 }
 parameters {
   vector[D-1] mu_theta;
@@ -27,13 +31,14 @@ parameters {
   vector[D-1] theta_star_raw[B];
   vector[D-1] beta_star_raw[P];
   
-  vector[K] omega; // covariate coefficients (non-hierarchical for now)
+  matrix[D-1,K] omega_raw; // covariate coefficients (non-hierarchical for now)
 }
 transformed parameters {
   // vector[D-1] theta_star[B];
   vector[D] theta[B];
   // vector[D-1] beta_star[P];
   vector[D] beta[P];
+  matrix[D,K] omega;
   
   for(b in 1:B) {
     for(d in 1:(D-1)) {
@@ -66,6 +71,8 @@ transformed parameters {
   //   }
   //   beta[p][D] = -sum(beta_star[p]);
   // }
+  
+  omega = append_row(omega_raw, zeroes);
 }
 model {
   mu_theta ~ normal(0,1);
@@ -82,10 +89,10 @@ model {
     // }
   }
   
-  omega ~ normal(0,1);
+  to_vector(omega_raw) ~ normal(0,1);
   
   for(n in 1:N)
-    outcome[n] ~ categorical_logit(theta[batter[n]] - beta[pitcher[n]] + V[n] * omega);
+    outcome[n] ~ categorical_logit(theta[batter[n]] - beta[pitcher[n]] + omega * V[n]);
 }
 generated quantities {
   vector[D] batter_outcomes[B];
