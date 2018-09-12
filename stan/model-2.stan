@@ -102,16 +102,16 @@ generated quantities {
   real batter_wOBA[B];
   real pitcher_wOBA[P];
   
-  mean_batter_outcomes = softmax(append_row(mu_theta, rep_vector(0.0, 1)) - append_row(mu_beta, rep_vector(0.0, 1)));
-  mean_pitcher_outcomes = softmax(append_row(mu_theta, rep_vector(0.0, 1)) - append_row(mu_beta, rep_vector(0.0, 1)));
+  mean_batter_outcomes = softmax(append_row(mu_theta, rep_vector(0.0, 1)) - append_row(mu_beta, rep_vector(0.0, 1)) + omega * V[1]);
+  mean_pitcher_outcomes = softmax(append_row(mu_theta, rep_vector(0.0, 1)) - append_row(mu_beta, rep_vector(0.0, 1)) + omega * V[1]);
   
   for(b in 1:B) {
-    batter_outcomes[b] = softmax(theta[b] - append_row(mu_beta, rep_vector(0.0, 1)));
+    batter_outcomes[b] = softmax(theta[b] - append_row(mu_beta, rep_vector(0.0, 1)) + omega * V[1]);
     batter_wOBA[b] = event_values * batter_outcomes[b];
   }
     
   for(p in 1:P) {
-    pitcher_outcomes[p] = softmax(append_row(mu_theta, rep_vector(0.0, 1)) - beta[p]);
+    pitcher_outcomes[p] = softmax(append_row(mu_theta, rep_vector(0.0, 1)) - beta[p] + omega * V[1]);
     pitcher_wOBA[p] = event_values * pitcher_outcomes[p];
   }
 }

@@ -8,6 +8,8 @@ try(library(pitchRx))
 try(library(data.table))
 try(library(dplyr))
 try(library(ggplot2))
+library(Lahman)
+library(magrittr)
 # library(ngspatial)
 
 options(mc.cores = parallel::detectCores())
