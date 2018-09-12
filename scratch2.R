@@ -43,9 +43,9 @@ pre_data <- atbat_2017 %>%
          # event %in% (event_counts %>%
          #   filter(n > 500))$event
          ) %>%
-  # filter(event %in% c("Single", "Double", "Triple", "Strikeout",
-  #                     "Walk", "Groundout", "Flyout", "Pop Out", "Home Run",
-  #                     "Intent Walk", "Lineout")) #%>%
+  filter(event %in% c("Single", "Double", "Triple", "Strikeout",
+                      "Walk", "Groundout", "Flyout", "Pop Out", "Home Run",
+                      "Intent Walk", "Lineout")) #%>%
   # filter(event %in% c("Single", "Walk", "Home Run", "Strikeout")) %>%
   sample_n(1500)
   
