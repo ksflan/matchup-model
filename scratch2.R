@@ -29,6 +29,10 @@ batter_atbat_counts <- atbat_2017 %>%
 
 event_counts <- count(atbat_2017, event)
 
+matchup_counts <- atbat_2017 %>%
+  count(batter, pitcher) %>%
+  filter(n > 17)
+
 pre_data <- atbat_2017 %>%
   left_join(game_2017 %>%
               select(venue,
@@ -38,19 +42,19 @@ pre_data <- atbat_2017 %>%
   mutate(platoon = stand == p_throws) %>%
   filter(#month(start_tfs_zulu) > 3,
          #gameday_link %in% sample_games,
-         batter %in% sample_batters$batter,
-         pitcher %in% sample_pitchers$pitcher#,
+         batter %in% matchup_counts$batter,
+         pitcher %in% matchup_counts$pitcher#,
          # event %in% (event_counts %>%
          #   filter(n > 500))$event
          ) %>%
   filter(event %in% c("Single", "Double", "Triple", "Strikeout",
                       "Walk", "Groundout", "Flyout", "Pop Out", "Home Run",
-                      "Intent Walk", "Lineout")) #%>%
+                      "Intent Walk", "Lineout", "Hit By Pitch")) #%>%
   # filter(event %in% c("Single", "Walk", "Home Run", "Strikeout")) %>%
-  sample_n(1500)
+  # sample_n(10000)
   
-m_matrix <- model.matrix(
-  event ~ platoon,# + venue,
+venue_matrix <- model.matrix(
+  event ~ venue + 0,
   data = pre_data
 )
 
@@ -84,12 +88,16 @@ data <- list(
   pitcher = as.numeric(factor(pre_data$pitcher)),
   outcome = as.numeric(factor(pre_data$event)),
   event_values = event_values[names(event_values) %in% unique(pre_data$event)][order(names(event_values[names(event_values) %in% unique(pre_data$event)]))],
-  V = m_matrix,
+  # V = m_matrix,
+  venue_matrix = venue_matrix,
+  home_advantage = pre_data$inning_side == "bottom",
+  platoon = pre_data$stand == pre_data$p_throws,
+  S = length(unique(pre_data$venue)),
   zero = 0
 )
 
 
-model_2 <- stan(file = "stan/model-2.stan",
+model_2_wOBA <- stan(file = "stan/model-2.stan",
                 data = data,
                 iter = 1000,
                 chains = 2,
@@ -102,7 +110,7 @@ model_2 <- stan(file = "stan/model-2.stan",
 
 # Process results
 
-model2_summary <- summary(model_2)$summary %>%
+model2_summary <- summary(model_2_wOBA)$summary %>%
   as.data.frame() %>%
   mutate(parameter = rownames(.))
 
@@ -159,11 +167,11 @@ theta %>%
   geom_density()
 
 batter_raw <- pre_data %>%
-  group_by(batter, event) %>%
-  summarise(n = n()) %>%
-  ungroup() %>%
-  group_by(batter) %>%
-  mutate(pct = n / sum(n)) %>%
+  dplyr::group_by(batter, event) %>%
+  dplyr::summarise(n = n()) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(batter) %>%
+  dplyr::mutate(pct = n / sum(n)) %>%
   left_join(people %>%
               select(key_mlbam, name_last, name_first) %>%
               mutate(key_mlbam = as.numeric(key_mlbam)), by = c("batter" = "key_mlbam")) %T>%
@@ -184,6 +192,13 @@ theta %>%
               aes(slope = 1, intercept = 0)) +
   facet_wrap(~outcome)
 
+batter_woba <- model2_summary %>%
+  filter(grepl("batter_wOBA", parameter),
+         !grepl("raw", parameter)) %>%
+  mutate(batter = as.numeric(levels(factor(pre_data$batter)))) %>%
+  left_join(people %>%
+              select(key_mlbam, name_last, name_first) %>%
+              mutate(key_mlbam = as.numeric(key_mlbam)), by = c("batter" = "key_mlbam"))
 
 
 
