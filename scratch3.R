@@ -94,6 +94,12 @@ data <- list(
 )
 
 
-
+model_2_wOBA <- stan(file = "stan/model-2.stan",
+                     data = data,
+                     iter = 1000,
+                     chains = 2,
+                     control = list(
+                       max_treedepth = 18
+                     ))
 
 
