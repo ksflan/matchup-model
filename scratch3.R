@@ -1,12 +1,13 @@
 
 # data_raw <- dbGetQuery(con, "select e.*, g.park_id, g.game_dt, g.home_team_id
 # from retrosheet.events e
-#                        left join retrosheet.games g on e.game_id = g.game_id 
+#                        left join retrosheet.games g on e.game_id = g.game_id
 #                        where left(cast(game_dt as text), 4) > '2016'")
+# saveRDS(data_raw, "data/raw-retrosheet-16-17.rds")
 # 
 # write_data <- data_raw %>%
 #   select(game_id, away_team_id, home_team_id, inn_ct, bat_home_id, outs_ct, resp_bat_id, resp_bat_hand_cd,
-#          resp_pit_id, resp_pit_hand_cd, event_cd, event_id, bat_event_fl, ab_fl, game_dt, park_id)
+#          resp_pit_id, resp_pit_hand_cd, event_cd, event_id, bat_event_fl, ab_fl, game_dt, park_id, bat_dest_id)
 # saveRDS(write_data, "data/retrosheet-16-17.rds")
 
 source("utils.R")
