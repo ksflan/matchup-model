@@ -2,10 +2,10 @@
 
 source("utils.R")
 
-atbat_2017 <- readRDS("data/atbat-data-2017.rds")
+# atbat_2017 <- readRDS("data/atbat-data-2017.rds")
 data_raw <- dbGetQuery(con, "select e.event_id, e.bat_dest_id, e.run1_dest_id, e.event_cd, e.base1_run_id, e.base2_run_id, e.base3_run_id,
                             e.run2_dest_id, e.run3_dest_id, e.outs_ct, e.game_id, e.inn_ct, e.bat_home_id,
-                           g.game_dt from retrosheet.events e left join retrosheet.games g on e.game_id = g.game_id where left(cast(game_dt as text), 4) > '1980'")
+                           g.game_dt from retrosheet.events e left join retrosheet.games g on e.game_id = g.game_id where left(cast(game_dt as text), 4) > '2016'")
 # data2011_2012_raw <- dbGetQuery(con, "select e.*, g.game_dt from retrosheet.events e left join retrosheet.games g on e.game_id = g.game_id where left(cast(game_dt as text), 4) = '2011' or left(cast(game_dt as text), 4) = '2012'")
 
 runs <- data_raw %>%

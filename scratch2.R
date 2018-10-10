@@ -31,7 +31,7 @@ event_counts <- count(atbat_2017, event)
 
 matchup_counts <- atbat_2017 %>%
   count(batter, pitcher) %>%
-  filter(n > 17)
+  filter(n > 30)
 
 pre_data <- atbat_2017 %>%
   left_join(game_2017 %>%

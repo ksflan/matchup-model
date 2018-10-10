@@ -61,3 +61,18 @@ convert_outcomes <- function(event) {
     event == "Triple Play" ~ "G"
   )
 }
+
+
+
+## Permanent data ----
+
+event_codes <- data.frame(
+  code = 0:24,
+  label = c("unknown event", "no event", "generic out", "strikeout",
+            "stolen base", "defensive indifference", "caught stealing",
+            "pickoff error", "pickoff", "wild pitch", "passed ball",
+            "balk", "other advance", "foul error", "walk",
+            "intentional walk", "hit by pitch", "interference",
+            "error", "fielder's choice", "single", "double",
+            "triple", "home run", "missing play")
+)

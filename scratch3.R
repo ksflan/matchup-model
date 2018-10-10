@@ -42,7 +42,7 @@ batter_atbat_counts <- data_raw %>%
 
 matchup_counts <- data_raw %>%
   count(resp_bat_id, resp_pit_id) %>%
-  filter(n > 20)
+  filter(n > 30)
 
 
 # predata
@@ -94,6 +94,7 @@ data <- list(
   home_advantage = pre_data$bat_home_id == 1,
   platoon = pre_data$resp_bat_hand_cd == pre_data$resp_pit_hand_cd,
   S = length(unique(pre_data$park_id)),
+  stadium = as.numeric(factor(pre_data$park_id)),
   zero = 0
 )
 
@@ -105,6 +106,14 @@ model_2_wOBA <- stan(file = "stan/model-2.stan",
                      control = list(
                        max_treedepth = 18
                      ))
+
+model5 <- stan(file = "stan/model-5.stan",
+               data = data,
+               iter = 1000,
+               chains = 2,
+               control = list(
+                 max_treedepth = 18
+               ))
 
 
 model2_summary <- rstan::summary(model_2_wOBA)$summary %>%
