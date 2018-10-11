@@ -16,7 +16,7 @@ data {
   real zero; // this is just the number 0, to be used for fixing the Dth element of the pitcher/batter coefficient vectors
   // matrix[B,K] W; // covariate matrix
   vector<lower=0,upper=1>[N] platoon; // vector of platoon advantage
-  matrix[N,S] venue_matrix; // matrix of indicators for venue
+  // matrix[N,S] venue_matrix; // matrix of indicators for venue
   vector<lower=0,upper=1>[N] home_advantage; // indicator for whether the batter is at home
   // vector[K] V[N]; // atbat-level covariates
 }
@@ -34,12 +34,12 @@ parameters {
   vector[D-1] theta_star_raw[B];
   vector[D-1] beta_star_raw[P];
   
-  vector[D-1] mu_omega_venue;
-  vector<lower=0>[D-1] sigma_omega_venue;
+  // vector[D-1] mu_omega_venue;
+  // vector<lower=0>[D-1] sigma_omega_venue;
   // 
   vector[D-1] omega_platoon_raw;
-  // vector[D-1] omega_home_raw;
-  vector[D-1] omega_venue_raw[S]; // venue covariate coefficients (non-hierarchical for now)
+  vector[D-1] omega_home_raw;
+  // vector[D-1] omega_venue_raw[S]; // venue covariate coefficients (non-hierarchical for now)
 }
 transformed parameters {
   // vector[D-1] theta_star[B];
@@ -47,25 +47,25 @@ transformed parameters {
   // vector[D-1] beta_star[P];
   vector[D] beta[P];
   vector[D] omega_platoon;
-  // vector[D] omega_home;
-  vector[D] omega_venue[S];
+  vector[D] omega_home;
+  // vector[D] omega_venue[S];
   // vector[D] omega_venue_final[S];
   
   for(d in 1:(D-1)) {
     omega_platoon[d] = omega_platoon_raw[d];
-  //   omega_home[d] = omega_home_raw[d];
+    omega_home[d] = omega_home_raw[d];
   }
   
   omega_platoon[D] = zero;
-  // omega_home[D] = zero;
+  omega_home[D] = zero;
   
-  for(s in 1:S) {
-    for(d in 1:(D-1)) {
-      omega_venue[s][d] = mu_omega_venue[d] + sigma_omega_venue[d] * omega_venue_raw[s][d];
-    }
-    
-    omega_venue[s][D] = zero;
-  }
+  // for(s in 1:S) {
+  //   for(d in 1:(D-1)) {
+  //     omega_venue[s][d] = mu_omega_venue[d] + sigma_omega_venue[d] * omega_venue_raw[s][d];
+  //   }
+  //   
+  //   omega_venue[s][D] = zero;
+  // }
   
   for(b in 1:B) {
     for(d in 1:(D-1)) {
@@ -117,11 +117,15 @@ model {
   }
   
   to_vector(omega_platoon_raw) ~ normal(0,5);
-  // to_vector(omega_home_raw) ~ normal(0,1);
-  // to_vector(omega_venue_raw) ~ normal(0,1);
+  to_vector(omega_home_raw) ~ normal(0,5);
+  // for(s in 1:S) {
+  //   for(d in 1:(D-1)) {
+  //     omega_venue_raw[s][d] ~ normal(0,5);
+  //   }
+  // }
   
   for(n in 1:N)
-    outcome[n] ~ categorical_logit(theta[batter[n]] - beta[pitcher[n]] + platoon[n] * omega_platoon + omega_venue[stadium[n]]);
+    outcome[n] ~ categorical_logit(theta[batter[n]] - beta[pitcher[n]] + platoon[n] * omega_platoon  + home_advantage[n] * omega_home); // + omega_venue[stadium[n]]
     // outcome[n] ~ categorical_logit(theta[batter[n]] - beta[pitcher[n]] + omega_venue_final * to_vector(venue_matrix[n]) + omega_home * home_advantage[n] + omega_platoon * platoon[n]);
 }
 generated quantities {

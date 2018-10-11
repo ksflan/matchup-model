@@ -42,7 +42,7 @@ batter_atbat_counts <- data_raw %>%
 
 matchup_counts <- data_raw %>%
   count(resp_bat_id, resp_pit_id) %>%
-  filter(n > 30)
+  filter(n > 24)
 
 
 # predata
@@ -93,8 +93,8 @@ data <- list(
   venue_matrix = venue_matrix,
   home_advantage = pre_data$bat_home_id == 1,
   platoon = pre_data$resp_bat_hand_cd == pre_data$resp_pit_hand_cd,
-  S = length(unique(pre_data$park_id)),
-  stadium = as.numeric(factor(pre_data$park_id)),
+  S = 3,#length(unique(pre_data$park_id)),
+  stadium = as.numeric(factor(pre_data$park_id)) %% 3 + 1,
   zero = 0
 )
 
@@ -112,7 +112,7 @@ model5 <- stan(file = "stan/model-5.stan",
                iter = 1000,
                chains = 2,
                control = list(
-                 max_treedepth = 18
+                 max_treedepth = 13
                ))
 
 
