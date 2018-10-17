@@ -48,14 +48,17 @@ matchup_counts <- data_raw %>%
 # predata
 
 pre_data <- data_raw %>%
+  mutate(event_cd = as.numeric(event_cd)) %>%
   left_join(batter_atbat_counts) %>%
   left_join(pitcher_atbat_counts) %>%
+  left_join(event_codes, by = c("event_cd" = "code")) %>%
   mutate(platoon = resp_bat_hand_cd == resp_pit_hand_cd,
          event_cd = as.numeric(event_cd),
          bat_home_id = as.numeric(bat_home_id)) %>%
   filter(#month(start_tfs_zulu) > 3,
     #gameday_link %in% sample_games,
     bat_event_fl == "true",
+    as.numeric(substr(game_dt, 1, 4)) == 2017,
     resp_bat_id %in% matchup_counts$resp_bat_id,
     resp_pit_id %in% matchup_counts$resp_pit_id#,
     # event %in% (event_counts %>%
@@ -72,7 +75,9 @@ venue_matrix <- model.matrix(
   data = pre_data
 )
 
-
+pre_batter <- positions %>%
+  filter(id %in% pre_data$resp_bat_id) %>%
+  arrange(id)
 
 
 data <- list(
@@ -81,6 +86,7 @@ data <- list(
   B = length(unique(pre_data$resp_bat_id)),
   D = length(unique(pre_data$event_cd)),
   # K = ncol(m_matrix),
+  F = length(unique(pre_batter$position)),
   batter = as.numeric(factor(pre_data$resp_bat_id)),
   pitcher = as.numeric(factor(pre_data$resp_pit_id)),
   outcome = as.numeric(factor(pre_data$event_cd)),#case_when(pre_data$event_cd == 27 ~ 1,
@@ -90,11 +96,12 @@ data <- list(
                                          event_values$year == 2017][order(event_values$event_cd[event_values$event_cd %in% pre_data$event_cd &
                                  event_values$year == 2017])],
   # V = m_matrix,
+  batter_position = as.numeric(factor(pre_batter$position)),
   venue_matrix = venue_matrix,
   home_advantage = pre_data$bat_home_id == 1,
   platoon = pre_data$resp_bat_hand_cd == pre_data$resp_pit_hand_cd,
-  S = 3,#length(unique(pre_data$park_id)),
-  stadium = as.numeric(factor(pre_data$park_id)) %% 3 + 1,
+  S = length(unique(pre_data$park_id)),
+  stadium = as.numeric(factor(pre_data$park_id)),
   zero = 0
 )
 
@@ -104,7 +111,7 @@ model_2_wOBA <- stan(file = "stan/model-2.stan",
                      iter = 1000,
                      chains = 2,
                      control = list(
-                       max_treedepth = 18
+                       max_treedepth = 13
                      ))
 
 model5 <- stan(file = "stan/model-5.stan",
@@ -115,12 +122,20 @@ model5 <- stan(file = "stan/model-5.stan",
                  max_treedepth = 13
                ))
 
+model6 <- stan(file = "stan/model-6.stan",
+               data = data,
+               iter = 1000,
+               chains = 2,
+               control = list(
+                 max_treedepth = 13
+               ))
 
-model2_summary <- rstan::summary(model_2_wOBA)$summary %>%
+
+model_summary <- rstan::summary(model6)$summary %>%
   as.data.frame() %>%
-  mutate(parameter = rownames(rstan::summary(model_2_wOBA)$summary))
+  mutate(parameter = rownames(rstan::summary(model6)$summary))
 
-batter_outcomes <- model2_summary %>%
+batter_outcomes <- model_summary %>%
   filter(grepl("batter_outcomes", parameter),
          !grepl("mean_batter_outcomes", parameter)) %>%
   mutate(batter = rep(levels(factor(pre_data$resp_bat_id)),
@@ -134,7 +149,7 @@ batter_outcomes <- model2_summary %>%
             by = c("batter" = "key_retro")) %>%
   mutate(display_name = paste0(name_first, " ", name_last))
 
-pitcher_outcomes <- model2_summary %>%
+pitcher_outcomes <- model_summary %>%
   filter(grepl("pitcher_outcomes", parameter),
          !grepl("mean_pitcher_outcomes", parameter)) %>%
   mutate(pitcher = rep(levels(factor(pre_data$resp_pit_id)),
@@ -148,7 +163,27 @@ pitcher_outcomes <- model2_summary %>%
             by = c("pitcher" = "key_retro")) %>%
   mutate(display_name = paste0(name_first, " ", name_last))
 
-batter_woba <- model2_summary %>%
+stadium_outcomes <- model_summary %>%
+  filter(grepl("stadium_outcomes", parameter),
+         !grepl("mean_stadium_outcomes", parameter)) %>%
+  mutate(stadium = rep(levels(factor(pre_data$park_id)),
+                       each = data$D),
+         outcome = as.numeric(rep(levels(factor(pre_data$event_cd)),
+                                  times = data$S))) %>%
+  left_join(event_codes,
+            by = c("outcome" = "code"))
+
+position_outcomes <- model_summary %>%
+  filter(grepl("position_outcomes", parameter),
+         !grepl("mean_stadium_outcomes", parameter)) %>%
+  mutate(position = rep(levels(factor(pre_batter$position)),
+                        each = data$D),
+         outcome = as.numeric(rep(levels(factor(pre_data$event_cd)),
+                                  times = data$F))) %>%
+  left_join(event_codes,
+            by = c("outcome" = "code"))
+
+batter_woba <- model_summary %>%
   filter(grepl("batter_wOBA", parameter)) %>%
   mutate(batter = levels(factor(pre_data$resp_bat_id))) %>%
   left_join(people %>%
@@ -156,13 +191,17 @@ batter_woba <- model2_summary %>%
             by = c("batter" = "key_retro")) %>%
   mutate(display_name = paste0(name_first, " ", name_last))
 
-pitcher_woba <- model2_summary %>%
+pitcher_woba <- model_summary %>%
   filter(grepl("pitcher_wOBA", parameter)) %>%
   mutate(pitcher = levels(factor(pre_data$resp_pit_id))) %>%
   left_join(people %>%
               select(key_retro, name_first, name_last),
             by = c("pitcher" = "key_retro")) %>%
   mutate(display_name = paste0(name_first, " ", name_last))
+
+stadium_woba <- model_summary %>%
+  filter(grepl("stadium_wOBA", parameter)) %>%
+  mutate(stadium = levels(factor(pre_data$park_id)))
 
 ## Plots ----
 
@@ -192,6 +231,19 @@ pitcher_outcomes %>%
   theme_minimal() +
   labs(x = "")
 
+stadium_outcomes %>%
+  ggplot(aes(stadium, mean)) +
+  geom_segment(aes(x = stadium, xend = stadium,
+                   y = `2.5%`, yend = `97.5%`)) +
+  geom_segment(aes(x = stadium, xend = stadium,
+                   y = `25%`, yend = `75%`),
+               color = "red", size = 1.2) +
+  geom_point() +
+  coord_flip() +
+  facet_wrap(~label) +
+  theme_minimal() +
+  labs(x = "")
+
 
 batter_woba %>%
   ggplot(aes(display_name, mean)) +
@@ -211,7 +263,7 @@ pitcher_woba %>%
                    y = `2.5%`, yend = `97.5%`)) +
   geom_segment(aes(x = display_name, xend = display_name,
                    y = `25%`, yend = `75%`),
-               color = "black", size = 1.2) +
+               color = "blue", size = 1.2) +
   geom_point() +
   coord_flip() +
   theme_minimal() +

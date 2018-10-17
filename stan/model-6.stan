@@ -1,4 +1,4 @@
-// Takes model-2 and adds covariates (this serves as a scratch file) 
+// Model 5 with person-level predictors based on position (and other covariates)
 
 
 data {
@@ -8,10 +8,12 @@ data {
   // int<lower=0> K; // num covariates
   int<lower=1> D; // number of distinct outcomes
   int<lower=1> S; // number of distinct venues
+  int<lower=1> F; // number of fielder/batter positions
   int<lower=1,upper=B> batter[N]; // batter index
   int<lower=1,upper=P> pitcher[N]; // pitcher index
   int<lower=1,upper=D> outcome[N]; // atbat outcome
   int<lower=1,upper=S> stadium[N]; // venue index
+  int<lower=1,upper=F> batter_position[B]; // matrix[B,F] batter_matrix;
   row_vector[D] event_values;
   real zero; // this is just the number 0, to be used for fixing the Dth element of the pitcher/batter coefficient vectors
   // matrix[B,K] W; // covariate matrix
@@ -25,9 +27,7 @@ transformed data {
   stadium_zeroes = rep_row_vector(0.0, S);
 }
 parameters {
-  // vector[D-1] alpha_raw; // league average
-  
-  vector[D-1] mu_theta;
+  vector[D-1] mu_theta[F];
   row_vector<lower=0>[D-1] sigma_theta;
   
   vector[D-1] mu_beta;
@@ -38,14 +38,12 @@ parameters {
   
   vector[D-1] mu_omega_venue;
   vector<lower=0>[D-1] sigma_omega_venue;
-  // 
+  
   vector[D-1] omega_platoon_raw;
   vector[D-1] omega_home_raw;
   vector[D-1] omega_venue_raw[S]; // venue covariate coefficients (non-hierarchical for now)
 }
 transformed parameters {
-  // vector[D] alpha; // league average outcomes
-  
   // vector[D-1] theta_star[B];
   vector[D] theta[B];
   // vector[D-1] beta_star[P];
@@ -58,12 +56,10 @@ transformed parameters {
   for(d in 1:(D-1)) {
     omega_platoon[d] = omega_platoon_raw[d];
     omega_home[d] = omega_home_raw[d];
-    // alpha[d] = alpha_raw[d];
   }
   // 
   omega_platoon[D] = zero;
   omega_home[D] = zero;
-  // alpha[D] = zero;
   
   for(s in 1:S) {
     for(d in 1:(D-1)) {
@@ -75,7 +71,7 @@ transformed parameters {
   
   for(b in 1:B) {
     for(d in 1:(D-1)) {
-      theta[b][d] = mu_theta[d] + sigma_theta[d] * theta_star_raw[b][d];
+      theta[b][d] = mu_theta[batter_position[b]][d] + sigma_theta[d] * theta_star_raw[b][d];
     }
 
     theta[b][D] = zero;
@@ -89,26 +85,10 @@ transformed parameters {
 
     beta[p][D] = zero;
   }
-  // beta_star[p] = mu_beta + sigma_beta * beta_star_raw[p];
-    
-  // for(b in 1:B) {
-  //   for(d in 1:(D-1)) {
-  //     theta[b][d] = theta_star[b][d];
-  //   }
-  //   theta[b][D] = -sum(theta_star[b]);
-  // }
-  // 
-  // for(p in 1:P) {
-  //   for(d in 1:(D-1)) {
-  //     beta[p][d] = beta_star[p][d];
-  //   }
-  //   beta[p][D] = -sum(beta_star[p]);
-  // }
-  
-  // omega_venue_final = append_row(omega_venue, stadium_zeroes);
 }
 model {
-  mu_theta ~ normal(0,5);
+  for(f in 1:F)
+    mu_theta[f] ~ normal(0,5);
   mu_beta ~ normal(0,5);
   mu_omega_venue ~ normal(0,5);
   sigma_theta ~ exponential(1.5);
@@ -143,13 +123,14 @@ generated quantities {
   vector[D] mean_batter_outcomes;
   vector[D] mean_pitcher_outcomes;
   vector[D] mean_stadium_outcomes;
+  vector[D] mean_position_outcomes[F];
   real batter_wOBA[B];
   real pitcher_wOBA[P];
   real stadium_wOBA[S];
 
-  mean_batter_outcomes = softmax(append_row(mu_theta, rep_vector(0.0, 1)) - append_row(mu_beta, rep_vector(0.0, 1)) + append_row(mu_omega_venue, rep_vector(0.0, 1)));
-  mean_pitcher_outcomes = softmax(append_row(mu_theta, rep_vector(0.0, 1)) - append_row(mu_beta, rep_vector(0.0, 1)) + append_row(mu_omega_venue, rep_vector(0.0, 1)));
-  mean_stadium_outcomes = softmax(append_row(mu_theta, rep_vector(0.0, 1)) - append_row(mu_beta, rep_vector(0.0, 1)) + append_row(mu_omega_venue, rep_vector(0.0, 1)));
+  mean_batter_outcomes = softmax(append_row(mu_theta[1], rep_vector(0.0, 1)) - append_row(mu_beta, rep_vector(0.0, 1)) + append_row(mu_omega_venue, rep_vector(0.0, 1)));
+  mean_pitcher_outcomes = softmax(append_row(mu_theta[1], rep_vector(0.0, 1)) - append_row(mu_beta, rep_vector(0.0, 1)) + append_row(mu_omega_venue, rep_vector(0.0, 1)));
+  mean_stadium_outcomes = softmax(append_row(mu_theta[1], rep_vector(0.0, 1)) - append_row(mu_beta, rep_vector(0.0, 1)) + append_row(mu_omega_venue, rep_vector(0.0, 1)));
 
   for(b in 1:B) {
     batter_outcomes[b] = softmax(theta[b] - append_row(mu_beta, rep_vector(0.0, 1)) + append_row(mu_omega_venue, rep_vector(0.0, 1)));
@@ -157,15 +138,28 @@ generated quantities {
   }
 
   for(p in 1:P) {
-    pitcher_outcomes[p] = softmax(append_row(mu_theta, rep_vector(0.0, 1)) - beta[p] + append_row(mu_omega_venue, rep_vector(0.0, 1)));
+    pitcher_outcomes[p] = softmax(append_row(mu_theta[1], rep_vector(0.0, 1)) - beta[p] + append_row(mu_omega_venue, rep_vector(0.0, 1)));
     pitcher_wOBA[p] = event_values * pitcher_outcomes[p];
   }
   
   for(s in 1:S) {
-    stadium_outcomes[s] = softmax(append_row(mu_theta, rep_vector(0.0, 1)) - append_row(mu_beta, rep_vector(0.0, 1)) + omega_venue[s]);
+    stadium_outcomes[s] = softmax(append_row(mu_theta[1], rep_vector(0.0, 1)) - append_row(mu_beta, rep_vector(0.0, 1)) + omega_venue[s]);
     stadium_wOBA[s] = event_values * stadium_outcomes[s];
   }
+  
+  for(f in 1:F) {
+    mean_position_outcomes[f] = softmax(append_row(mu_theta[f], rep_vector(0.0, 1)) - append_row(mu_beta, rep_vector(0.0, 1)) + append_row(mu_omega_venue, rep_vector(0.0, 1)));
+  }
 }
+
+
+
+
+
+
+
+
+
 
 
 
