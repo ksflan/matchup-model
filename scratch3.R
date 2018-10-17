@@ -2,8 +2,9 @@
 # data_raw <- dbGetQuery(con, "select e.*, g.park_id, g.game_dt, g.home_team_id
 # from retrosheet.events e
 #                        left join retrosheet.games g on e.game_id = g.game_id
-#                        where left(cast(game_dt as text), 4) > '2010'")
-# saveRDS(data_raw, "data/raw-retrosheet-10-17.rds")
+#                        where left(cast(game_dt as text), 4) > '2016'")
+# saveRDS(data_raw %>%
+#           filter(substr(game_dt, 1, 4) == "2017"), "data/raw-retrosheet-17.rds")
 # #
 # write_data <- data_raw %>%
 #   select(game_id, away_team_id, home_team_id, inn_ct, bat_home_id, outs_ct, resp_bat_id, resp_bat_hand_cd,
@@ -15,7 +16,7 @@ source("utils.R")
 
 # Building model with retrosheet data ----
 
-data_raw <- readRDS("data/retrosheet-16-17.rds")
+data_raw <- readRDS("data/retrosheet-17.rds")
 event_values <- readRDS("retrosheet-event-values-1980-2017.rds") %>%
   mutate(event_cd = as.numeric(event_cd))
 people <- readRDS("data/people.rds")
