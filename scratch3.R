@@ -16,7 +16,7 @@ source("utils.R")
 
 # Building model with retrosheet data ----
 
-data_raw <- readRDS("data/retrosheet-17.rds")
+data_raw <- readRDS("data/raw-retrosheet-17.rds")
 event_values <- readRDS("retrosheet-event-values-1980-2017.rds") %>%
   mutate(event_cd = as.numeric(event_cd))
 people <- readRDS("data/people.rds")
@@ -43,22 +43,23 @@ batter_atbat_counts <- data_raw %>%
 
 matchup_counts <- data_raw %>%
   count(resp_bat_id, resp_pit_id) %>%
-  filter(n > 24)
+  filter(n > 0)
 
 
 # predata
 
 pre_data <- data_raw %>%
-  mutate(event_cd = as.numeric(event_cd)) %>%
   left_join(batter_atbat_counts) %>%
   left_join(pitcher_atbat_counts) %>%
   left_join(event_codes, by = c("event_cd" = "code")) %>%
   mutate(platoon = resp_bat_hand_cd == resp_pit_hand_cd,
          event_cd = as.numeric(event_cd),
-         bat_home_id = as.numeric(bat_home_id)) %>%
+         bat_home_id = as.numeric(bat_home_id),
+         battedball_cd = ifelse(is.na(battedball_cd), "NA", battedball_cd),
+         outcome = paste0(event_cd, "-", battedball_cd)) %>%
   filter(#month(start_tfs_zulu) > 3,
     #gameday_link %in% sample_games,
-    bat_event_fl == "true",
+    bat_event_fl,
     as.numeric(substr(game_dt, 1, 4)) == 2017,
     resp_bat_id %in% matchup_counts$resp_bat_id,
     resp_pit_id %in% matchup_counts$resp_pit_id#,
@@ -77,8 +78,8 @@ venue_matrix <- model.matrix(
 )
 
 pre_batter <- positions %>%
-  filter(id %in% pre_data$resp_bat_id) %>%
-  arrange(id)
+  filter(resp_bat_id %in% pre_data$resp_bat_id) %>%
+  arrange(resp_bat_id)
 
 
 data <- list(
@@ -87,7 +88,7 @@ data <- list(
   B = length(unique(pre_data$resp_bat_id)),
   D = length(unique(pre_data$event_cd)),
   # K = ncol(m_matrix),
-  F = length(unique(pre_batter$position)),
+  F = length(unique(pre_batter$bat_fld_cd)),
   batter = as.numeric(factor(pre_data$resp_bat_id)),
   pitcher = as.numeric(factor(pre_data$resp_pit_id)),
   outcome = as.numeric(factor(pre_data$event_cd)),#case_when(pre_data$event_cd == 27 ~ 1,
@@ -97,7 +98,7 @@ data <- list(
                                          event_values$year == 2017][order(event_values$event_cd[event_values$event_cd %in% pre_data$event_cd &
                                  event_values$year == 2017])],
   # V = m_matrix,
-  batter_position = as.numeric(factor(pre_batter$position)),
+  batter_position = as.numeric(factor(pre_batter$bat_fld_cd)),
   venue_matrix = venue_matrix,
   home_advantage = pre_data$bat_home_id == 1,
   platoon = pre_data$resp_bat_hand_cd == pre_data$resp_pit_hand_cd,
@@ -107,21 +108,21 @@ data <- list(
 )
 
 
-model_2_wOBA <- stan(file = "stan/model-2.stan",
-                     data = data,
-                     iter = 1000,
-                     chains = 2,
-                     control = list(
-                       max_treedepth = 13
-                     ))
-
-model5 <- stan(file = "stan/model-5.stan",
-               data = data,
-               iter = 1000,
-               chains = 2,
-               control = list(
-                 max_treedepth = 13
-               ))
+# model_2_wOBA <- stan(file = "stan/model-2.stan",
+#                      data = data,
+#                      iter = 1000,
+#                      chains = 2,
+#                      control = list(
+#                        max_treedepth = 13
+#                      ))
+# 
+# model5 <- stan(file = "stan/model-5.stan",
+#                data = data,
+#                iter = 1000,
+#                chains = 2,
+#                control = list(
+#                  max_treedepth = 13
+#                ))
 
 model6 <- stan(file = "stan/model-6.stan",
                data = data,
