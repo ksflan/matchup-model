@@ -246,6 +246,19 @@ stadium_outcomes %>%
   theme_minimal() +
   labs(x = "")
 
+position_outcomes %>%
+  ggplot(aes(position, mean)) +
+  geom_segment(aes(x = position, xend = position,
+                   y = `2.5%`, yend = `97.5%`)) +
+  geom_segment(aes(x = position, xend = position,
+                   y = `25%`, yend = `75%`),
+               color = "red", size = 1.2) +
+  geom_point() +
+  coord_flip() +
+  facet_wrap(~label) +
+  theme_minimal() +
+  labs(x = "")
+
 
 batter_woba %>%
   ggplot(aes(display_name, mean)) +
