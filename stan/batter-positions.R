@@ -3,8 +3,8 @@
 
 source("utils.R")
 
-games <- dbGetQuery(con, "select * from retrosheet.games
-                    where left(cast(game_dt as text), 4) = '2017'")
+# games <- dbGetQuery(con, "select * from retrosheet.games
+#                     where left(cast(game_dt as text), 4) = '2017'")
 
 positions <- data_raw %>%
   mutate(bat_fld_cd = as.numeric(bat_fld_cd)) %>%
